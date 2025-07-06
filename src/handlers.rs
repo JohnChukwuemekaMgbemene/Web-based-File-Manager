@@ -1,13 +1,15 @@
+use crate::auth::AuthManager;
 use crate::bodies::{BytesBody, StringBody};
 use crate::file_browser::{generate_directory_html, get_directory_entries};
 use crate::upload::handle_upload;
 use crate::utils::collect_body_bytes;
 use hyper::body::Body;
-use hyper::{Request, Response, StatusCode};
+use hyper::{Request, Response, StatusCode, Method};
 use hyper::body::Incoming;
 use std::path::Path;
 use std::fs;
 use std::env;
+use std::sync::Arc;
 
 pub type BoxBody = Box<dyn Body<Data = hyper::body::Bytes, Error = std::io::Error> + Send + Unpin>;
 
@@ -88,17 +90,35 @@ fn is_system_file_or_folder(name: &str, is_hidden: bool) -> bool {
     false
 }
 
-pub async fn handle_request(req: Request<Incoming>) -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send + Sync>> {
-    let uri = req.uri();
-    let path = uri.path();
-    let method = req.method();
-
-    match (method.as_str(), path) {
-        ("GET", "/") => home_page(),
-        ("GET", path) if path.starts_with("/browse") => browse_directory(path).await,
-        ("GET", path) if path.starts_with("/file") => serve_file(path).await,
-        ("GET", "/upload") => upload_page(),
-        ("POST", "/upload") => handle_upload_request(req).await,
+pub async fn handle_request(
+    req: Request<Incoming>,
+    auth_manager: Arc<AuthManager>,
+) -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send + Sync>> {
+    let method = req.method().clone();
+    let path = req.uri().path();
+    
+    // Check if user is authenticated (except for login routes)
+    if path != "/login" && path != "/static" && !path.starts_with("/static/") {
+        if !is_authenticated(&req, &auth_manager) {
+            return Ok(redirect_to_login());
+        }
+    }
+    
+    match (method, path) {
+        (Method::GET, "/login") => {
+            Ok(html_response(crate::auth::generate_login_html()))
+        }
+        (Method::POST, "/login") => {
+            handle_login(req, auth_manager).await
+        }
+        (Method::GET, "/logout") => {
+            handle_logout(req, auth_manager).await
+        }
+        (Method::GET, "/") => home_page(),
+        (Method::GET, path) if path.starts_with("/browse") => browse_directory(path).await,
+        (Method::GET, path) if path.starts_with("/file") => serve_file(path).await,
+        (Method::GET, "/upload") => upload_page(),
+        (Method::POST, "/upload") => handle_upload_request(req).await,
         _ => not_found(),
     }
 }
@@ -520,9 +540,110 @@ async fn handle_upload_request(req: Request<Incoming>) -> Result<Response<BoxBod
     }
 }
 
+fn is_authenticated(req: &Request<Incoming>, auth_manager: &AuthManager) -> bool {
+    if let Some(cookie_header) = req.headers().get("cookie") {
+        if let Ok(cookie_str) = cookie_header.to_str() {
+            for cookie in cookie_str.split(';') {
+                let cookie = cookie.trim();
+                if cookie.starts_with("session_id=") {
+                    let session_id = &cookie[11..]; // Remove "session_id="
+                    return auth_manager.validate_session(session_id);
+                }
+            }
+        }
+    }
+    false
+}
+
+async fn handle_login(
+    req: Request<Incoming>,
+    auth_manager: Arc<AuthManager>,
+) -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send + Sync>> {
+    let body = collect_body_bytes(req.into_body()).await?; // Use your existing function
+    let body_str = String::from_utf8(body.to_vec())?;
+    
+    // Parse form data
+    let mut username = String::new();
+    let mut password = String::new();
+    
+    for pair in body_str.split('&') {
+        let mut parts = pair.split('=');
+        if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
+            let decoded_value = urlencoding::decode(value)?.to_string();
+            match key {
+                "username" => username = decoded_value,
+                "password" => password = decoded_value,
+                _ => {}
+            }
+        }
+    }
+    
+    if let Some(session_id) = auth_manager.authenticate(&username, &password) {
+        let response = Response::builder()
+            .status(302)
+            .header("Location", "/browse")
+            .header("Set-Cookie", format!("session_id={}; HttpOnly; Path=/", session_id))
+            .body(Box::new(StringBody::new("".to_string())) as BoxBody)?;
+        
+        Ok(response)
+    } else {
+        // Return login page with error
+        let error_html = crate::auth::generate_login_html().replace(
+            "</form>",
+            r#"</form>
+            <div class="error">Invalid username or password</div>"#
+        );
+        Ok(html_response(error_html))
+    }
+}
+
+async fn handle_logout(
+    req: Request<Incoming>,
+    auth_manager: Arc<AuthManager>,
+) -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send + Sync>> {
+    // Extract session ID and logout
+    if let Some(cookie_header) = req.headers().get("cookie") {
+        if let Ok(cookie_str) = cookie_header.to_str() {
+            for cookie in cookie_str.split(';') {
+                let cookie = cookie.trim();
+                if cookie.starts_with("session_id=") {
+                    let session_id = &cookie[11..];
+                    auth_manager.logout(session_id);
+                    break;
+                }
+            }
+        }
+    }
+    
+    let response = Response::builder()
+        .status(302)
+        .header("Location", "/login")
+        .header("Set-Cookie", "session_id=; HttpOnly; Path=/; Max-Age=0")
+        .body(Box::new(StringBody::new("".to_string())) as BoxBody)?;
+    
+    Ok(response)
+}
+
+fn redirect_to_login() -> Response<BoxBody> {
+    Response::builder()
+        .status(302)
+        .header("Location", "/login")
+        .body(Box::new(StringBody::new("".to_string())) as BoxBody)
+        .unwrap()
+}
+
+fn html_response(html: String) -> Response<BoxBody> {
+    Response::builder()
+        .status(200)
+        .header("Content-Type", "text/html")
+        .body(Box::new(StringBody::new(html)) as BoxBody)
+        .unwrap()
+}
+
 fn not_found() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send + Sync>> {
     Ok(Response::builder()
-        .status(StatusCode::NOT_FOUND)
+        .status(404)
+        .header("Content-Type", "text/html")
         .body(Box::new(StringBody::new("404 Not Found".to_string())) as BoxBody)
         .unwrap())
 }

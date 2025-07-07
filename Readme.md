@@ -1,4 +1,4 @@
-# Rust Web-Based File Manager
+# Firxttech Web-Based File Manager
 
 A modern, secure, and fast web-based file manager built with Rust. Access and manage your files from any device with a web browser.
 
@@ -47,7 +47,7 @@ cargo run
 
 4. Open your web browser and navigate to:
 ```
-http://localhost:3000
+http://localhost:8000
 ```
 
 ### Dependencies
@@ -147,11 +147,39 @@ src/
 
 ## API Endpoints
 
-- `GET /` - Home page
-- `GET /browse[/path]` - File browser interface
-- `GET /file/[path]` - File serving (view or download)
-- `GET /upload` - Upload interface
-- `POST /upload` - File upload handler
+- `GET /` - Home page (redirects to /browse if authenticated, /login if not)
+- `GET /login` - Login page
+- `POST /login` - Login form submission
+- `GET /logout` - Logout (destroys session)
+- `GET /browse[/path]` - File browser interface (requires authentication)
+- `GET /file/[path]` - File serving (view or download, requires authentication)
+- `GET /upload` - Upload interface (requires authentication)
+- `POST /upload` - File upload handler (requires authentication)
+
+## Authentication
+
+The application includes session-based authentication to protect your files:
+
+### Default Credentials
+- **Username**: `admin`
+- **Password**: `admin123`
+
+### Security Features
+- Session-based authentication with 1-hour timeout
+- HttpOnly cookies to prevent XSS attacks
+- Password hashing (using DefaultHasher)
+- Automatic session cleanup on expiration
+- All routes protected except login page
+
+### Changing Default Credentials
+To add new users or change passwords, modify the `AuthManager::new()` function in `src/auth.rs`:
+
+```rust
+// Add additional users
+auth.add_user("newuser", "newpassword");
+```
+
+**Note**: For production use, consider implementing proper password hashing with bcrypt or argon2.
 
 ## Contributing
 

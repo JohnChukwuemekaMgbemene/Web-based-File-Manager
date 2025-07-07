@@ -115,7 +115,7 @@ The application automatically filters and blocks access to:
 The server runs on port 3000 by default. To change the port, modify the `main.rs` file:
 
 ```rust
-let addr = SocketAddr::from(([127, 0, 0, 1], 3000)); // Change 3000 to your desired port
+let addr = SocketAddr::from(([0, 0, 0, 0], 3000)); // Change 3000 to your desired port
 ```
 
 ### Home Directory

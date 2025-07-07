@@ -88,7 +88,7 @@ pub fn generate_directory_html(entries: &[FileEntry], url_path: &str) -> String 
     let mut html = format!(r#"<!DOCTYPE html>
 <html>
 <head>
-    <title>File Browser - {}</title>
+    <title>FirxTTech Solutions - {}</title>
     <meta charset="UTF-8">
     <style>
         body {{ font-family: Arial, sans-serif; margin: 20px; background: linear-gradient(135deg, #f97316 0%, #2563eb 100%); min-height: 100vh; }}
@@ -136,7 +136,7 @@ pub fn generate_directory_html(entries: &[FileEntry], url_path: &str) -> String 
         <div class="breadcrumb">
             <a href="/">Home</a> {} 
         </div>
-        <h1>File Browser</h1>
+        <h1>File Manager</h1>
         <a href="/upload" class="upload-btn">Upload</a>
     </div>
     <div class="grid-container">

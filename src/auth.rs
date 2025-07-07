@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
-use std::hash::{Hash, Hasher}; // Add Hash back to imports
+use std::hash::{Hash, Hasher};
 
 #[derive(Clone)]
 pub struct AuthManager {
@@ -153,6 +153,7 @@ pub fn generate_login_html() -> String {
             border-radius: 8px;
             font-size: 16px;
             transition: border-color 0.3s;
+            box-sizing: border-box; /* Add this to fix the width issue */
         }
         input[type="text"]:focus, input[type="password"]:focus {
             outline: none;
@@ -169,6 +170,7 @@ pub fn generate_login_html() -> String {
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
+            box-sizing: border-box; /* Add this for consistency */
         }
         .login-btn:hover {
             background: linear-gradient(135deg, #1d4ed8, #1e40af);

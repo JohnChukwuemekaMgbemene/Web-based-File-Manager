@@ -31,7 +31,6 @@ impl AuthManager {
         
         // Add default admin user (password: "admin123")
         auth.add_user("admin", "admin123");
-        auth.add_user("Firxt", "377490")
         auth
     }
     

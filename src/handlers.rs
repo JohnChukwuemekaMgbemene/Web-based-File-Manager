@@ -581,7 +581,7 @@ async fn handle_login(
     if let Some(session_id) = auth_manager.authenticate(&username, &password) {
         let response = Response::builder()
             .status(302)
-            .header("Location", "/browse")
+            .header("Location", "/")
             .header("Set-Cookie", format!("session_id={}; HttpOnly; Path=/", session_id))
             .body(Box::new(StringBody::new("".to_string())) as BoxBody)?;
         

@@ -98,7 +98,7 @@ pub fn generate_directory_html(entries: &[FileEntry], url_path: &str) -> String 
         .breadcrumb a:hover {{ text-decoration: underline; color: #1d4ed8; }}
         .upload-btn {{ position: absolute; top: 30px; right: 20px; background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 10px 20px; border: none; border-radius: 8px; text-decoration: none; font-size: 14px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(249, 115, 22, 0.3); }}
         .upload-btn:hover {{ background: linear-gradient(135deg, #ea580c, #dc2626); transform: translateY(-2px); box-shadow: 0 4px 20px rgba(249, 115, 22, 0.4); }}
-        h1 {{ color: #1f2937; margin: 0; text-align: center; font-size: 28px; }}
+        h1 {{ color: #1f2937; margin: 0; text-align: left; font-size: 28px; }}
         .grid-container {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; padding: 0; }}
         .grid-item {{ background: rgba(113, 152, 224, 0.9); border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer; backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.2); }}
         .grid-item:hover {{ transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); background: rgba(255, 255, 255, 0.95); }}

@@ -6,19 +6,22 @@ use std::fs;
 
 use super::utils::{BoxBody, is_system_file_or_folder, get_home_directory, url_decode};
 
+// Replace the home_page function:
+
 pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send + Sync>> {
     let html = r#"
     <!DOCTYPE html>
     <html>
     <head>
         <title>Rust Web Server</title>
+        <meta charset="UTF-8">
         <style>
             body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #f97316 0%, #2563eb 100%); min-height: 100vh; }
             .container { max-width: 800px; margin: 0 auto; background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); position: relative; }
             
             /* Hamburger Menu */
-            .hamburger-menu { position: absolute; top: 20px; left: 20px; z-index: 1000; }
-            .hamburger-btn { background: none; border: none; cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.3s ease; }
+            .hamburger-menu { position: absolute; top: 20px; left: 20px; z-index: 9999; }
+            .hamburger-btn { background: none; border: none; cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.3s ease; position: relative; z-index: 10000; }
             .hamburger-btn:hover { background: rgba(37, 99, 235, 0.1); }
             .hamburger-icon { width: 24px; height: 20px; position: relative; transform: rotate(0deg); transition: .5s ease-in-out; }
             .hamburger-icon span { display: block; position: absolute; height: 3px; width: 100%; background: #2563eb; border-radius: 9px; opacity: 1; left: 0; transform: rotate(0deg); transition: .25s ease-in-out; }
@@ -29,16 +32,21 @@ pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send
             .hamburger-btn.active .hamburger-icon span:nth-child(2) { opacity: 0; left: -60px; }
             .hamburger-btn.active .hamburger-icon span:nth-child(3) { top: 8px; transform: rotate(-135deg); }
             
-            .dropdown-menu { position: absolute; top: 60px; left: 0; background: rgba(255, 255, 255, 0.98); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); min-width: 200px; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s ease; z-index: 999; }
+            .dropdown-menu { position: fixed; top: 80px; left: 40px; background: rgba(255, 255, 255, 0.98); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.25); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.3); min-width: 220px; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s ease; z-index: 9999; max-height: 80vh; overflow-y: auto; }
             .dropdown-menu.show { opacity: 1; visibility: visible; transform: translateY(0); }
-            .menu-item { padding: 12px 20px; border-bottom: 1px solid rgba(0,0,0,0.1); cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 12px; color: #374151; }
+            .dropdown-menu::before { content: ''; position: absolute; top: -8px; left: 20px; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 8px solid rgba(255, 255, 255, 0.98); z-index: 10000; }
+            
+            .menu-item { padding: 14px 20px; border-bottom: 1px solid rgba(0,0,0,0.08); cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 12px; color: #374151; background: rgba(255, 255, 255, 0.9); position: relative; z-index: 9999; }
             .menu-item:last-child { border-bottom: none; }
-            .menu-item:hover { background: rgba(37, 99, 235, 0.1); color: #2563eb; }
+            .menu-item:hover { background: rgba(37, 99, 235, 0.1); color: #2563eb; transform: translateX(2px); }
+            .menu-item:first-child { border-radius: 12px 12px 0 0; }
+            .menu-item:last-child { border-radius: 0 0 12px 12px; }
             .menu-icon { font-size: 16px; width: 20px; text-align: center; }
-            .menu-text { font-weight: 500; }
-            .menu-shortcut { margin-left: auto; font-size: 12px; color: #9ca3af; }
-            .menu-separator { height: 1px; background: rgba(0,0,0,0.1); margin: 8px 0; }
-            .menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: transparent; z-index: 998; display: none; }
+            .menu-text { font-weight: 500; flex: 1; }
+            .menu-shortcut { font-size: 11px; color: #9ca3af; background: rgba(156, 163, 175, 0.1); padding: 2px 6px; border-radius: 4px; }
+            .menu-separator { height: 1px; background: rgba(0,0,0,0.1); margin: 6px 0; }
+            
+            .menu-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.2); z-index: 9998; display: none; backdrop-filter: blur(2px); }
             .menu-overlay.show { display: block; }
             
             h1 { color: #1f2937; text-align: center; font-size: 36px; margin-bottom: 20px; background: linear-gradient(135deg, #f97316, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
@@ -117,17 +125,17 @@ pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send
             </div>
             <div class="features">
                 <div class="feature">
-                    <div class="feature-icon">FAST</div>
+                    <div class="feature-icon">⚡</div>
                     <h3>Fast & Efficient</h3>
                     <p>Built with Rust for maximum performance and safety</p>
                 </div>
                 <div class="feature">
-                    <div class="feature-icon">SECURE</div>
+                    <div class="feature-icon">🔒</div>
                     <h3>Secure</h3>
                     <p>System files are automatically filtered and protected</p>
                 </div>
                 <div class="feature">
-                    <div class="feature-icon">WEB</div>
+                    <div class="feature-icon">🌐</div>
                     <h3>Web-Based</h3>
                     <p>Access your files from any device with a web browser</p>
                 </div>
@@ -148,10 +156,12 @@ pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send
                     hamburgerBtn.classList.add('active');
                     dropdownMenu.classList.add('show');
                     menuOverlay.classList.add('show');
+                    document.body.style.overflow = 'hidden';
                 } else {
                     hamburgerBtn.classList.remove('active');
                     dropdownMenu.classList.remove('show');
                     menuOverlay.classList.remove('show');
+                    document.body.style.overflow = 'auto';
                 }
             }
             
@@ -166,7 +176,7 @@ pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send
             function browseFolders() { window.location.href = '/browse'; closeMenu(); }
             function showSettings() { alert('Settings panel coming soon!'); closeMenu(); }
             function showHelp() { 
-                alert('Web-based File Manager v1.0\\n\\nBuilt with Rust 🦀\\nFirxTTech Solutions © 2025'); 
+                alert('Web-based File Manager v1.0\n\nBuilt with Rust 🦀\nFirxTTech Solutions © 2025'); 
                 closeMenu(); 
             }
             function logout() { 
@@ -200,14 +210,19 @@ pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send
                     closeMenu();
                 }
             });
+            
+            // Prevent menu from closing when clicking inside dropdown
+            document.getElementById('dropdownMenu').addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
         </script>
     </body>
     </html>
     "#;
-    
+
     Ok(Response::builder()
         .status(StatusCode::OK)
-        .header("Content-Type", "text/html")
+        .header("Content-Type", "text/html; charset=utf-8")
         .body(Box::new(StringBody::new(html.to_string())) as BoxBody)
         .unwrap())
 }

@@ -1,219 +1,235 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
-use uuid::Uuid;
-use std::hash::{Hash, Hasher};
 
-#[derive(Clone)]
-pub struct AuthManager {
-    sessions: Arc<Mutex<HashMap<String, Session>>>,
-    users: Arc<Mutex<HashMap<String, User>>>,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Session {
-    pub user_id: String,
+    pub username: String,
+    pub created_at: u64,
     pub expires_at: u64,
 }
 
-#[derive(Debug, Clone)]
-pub struct User {
-    pub username: String,
-    pub password_hash: String,
+pub struct AuthManager {
+    sessions: Arc<Mutex<HashMap<String, Session>>>,
+    valid_credentials: HashMap<String, String>,
 }
 
 impl AuthManager {
     pub fn new() -> Self {
-        let auth = AuthManager { // Remove mut
+        let mut credentials = HashMap::new();
+        credentials.insert("admin".to_string(), "admin123".to_string());
+        
+        Self {
             sessions: Arc::new(Mutex::new(HashMap::new())),
-            users: Arc::new(Mutex::new(HashMap::new())),
-        };
-        
-        // Add default admin user (password: "admin123")
-        auth.add_user("admin", "admin123");
-        auth
-    }
-    
-    pub fn add_user(&self, username: &str, password: &str) {
-        let password_hash = self.hash_password(password);
-        let user = User {
-            username: username.to_string(),
-            password_hash,
-        };
-        
-        let mut users = self.users.lock().unwrap();
-        users.insert(username.to_string(), user);
+            valid_credentials: credentials,
+        }
     }
     
     pub fn authenticate(&self, username: &str, password: &str) -> Option<String> {
-        let users = self.users.lock().unwrap();
-        if let Some(user) = users.get(username) {
-            if self.verify_password(password, &user.password_hash) {
-                let session_id = Uuid::new_v4().to_string();
-                let expires_at = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs() + 3600; // 1 hour
+        if let Some(stored_password) = self.valid_credentials.get(username) {
+            if stored_password == password {
+                // Generate session token
+                let token = format!("{}{}", username, 
+                    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
                 
                 let session = Session {
-                    user_id: username.to_string(),
-                    expires_at,
+                    username: username.to_string(),
+                    created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+                    expires_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() + 3600, // 1 hour
                 };
                 
-                let mut sessions = self.sessions.lock().unwrap();
-                sessions.insert(session_id.clone(), session);
+                if let Ok(mut sessions) = self.sessions.lock() {
+                    sessions.insert(token.clone(), session);
+                }
                 
-                return Some(session_id);
+                return Some(token);
             }
         }
         None
     }
     
-    pub fn validate_session(&self, session_id: &str) -> bool {
-        let mut sessions = self.sessions.lock().unwrap();
-        if let Some(session) = sessions.get(session_id) {
-            let now = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs();
-            
-            if session.expires_at > now {
-                return true;
-            } else {
-                // Remove expired session
-                sessions.remove(session_id);
+    pub fn is_valid_token(&self, token: &str) -> bool {
+        if let Ok(sessions) = self.sessions.lock() {
+            if let Some(session) = sessions.get(token) {
+                let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+                return session.expires_at > now;
             }
         }
         false
     }
     
-    pub fn logout(&self, session_id: &str) {
-        let mut sessions = self.sessions.lock().unwrap();
-        sessions.remove(session_id);
+    pub fn logout(&self, token: &str) -> bool {
+        if let Ok(mut sessions) = self.sessions.lock() {
+            sessions.remove(token).is_some()
+        } else {
+            false
+        }
     }
     
-    // Simple password hashing (use bcrypt in production)
-    fn hash_password(&self, password: &str) -> String {
-        use std::collections::hash_map::DefaultHasher;
-        
-        let mut hasher = DefaultHasher::new();
-        password.hash(&mut hasher);
-        format!("{:x}", hasher.finish())
+    pub fn invalidate_token(&self, token: &str) -> bool {
+        if let Ok(mut sessions) = self.sessions.lock() {
+            sessions.remove(token).is_some()
+        } else {
+            false
+        }
     }
     
-    fn verify_password(&self, password: &str, hash: &str) -> bool {
-        self.hash_password(password) == hash
+    pub fn cleanup_expired_sessions(&self) {
+        if let Ok(mut sessions) = self.sessions.lock() {
+            let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            sessions.retain(|_, session| session.expires_at > now);
+        }
+    }
+    
+    pub fn get_session_info(&self, token: &str) -> Option<Session> {
+        if let Ok(sessions) = self.sessions.lock() {
+            sessions.get(token).cloned()
+        } else {
+            None
+        }
     }
 }
 
 pub fn generate_login_html() -> String {
-    r#"<!DOCTYPE html>
-<html>
-<head>
-    <title>Login - File Manager</title>
-    <meta charset="UTF-8">
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 0; 
-            padding: 0; 
-            background: linear-gradient(135deg, #f97316 0%, #2563eb 100%); 
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .login-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            backdrop-filter: blur(10px);
-            width: 100%;
-            max-width: 400px;
-        }
-        h1 {
-            text-align: center;
-            color: #1f2937;
-            margin-bottom: 30px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #374151;
-            font-weight: 500;
-        }
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-            box-sizing: border-box; /* Add this to fix the width issue */
-        }
-        input[type="text"]:focus, input[type="password"]:focus {
-            outline: none;
-            border-color: #2563eb;
-        }
-        .login-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-sizing: border-box; /* Add this for consistency */
-        }
-        .login-btn:hover {
-            background: linear-gradient(135deg, #1d4ed8, #1e40af);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
-        }
-        .error {
-            color: #dc2626;
-            text-align: center;
-            margin-top: 15px;
-            font-size: 14px;
-        }
-        .default-creds {
-            background: rgba(249, 115, 22, 0.1);
-            border: 1px solid rgba(249, 115, 22, 0.3);
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #ea580c;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <h1>🔒 File Manager Login</h1>
-        <form method="POST" action="/login">
-            <div class="form-group">
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username" required>
+    r#"
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Login - FirxTTech Solutions</title>
+        <meta charset="UTF-8">
+        <style>
+            body { 
+                font-family: Arial, sans-serif; 
+                background: linear-gradient(135deg, #f97316 0%, #2563eb 100%); 
+                margin: 0; 
+                padding: 0; 
+                min-height: 100vh; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+            }
+            .login-container { 
+                background: rgba(255, 255, 255, 0.95); 
+                padding: 40px; 
+                border-radius: 16px; 
+                box-shadow: 0 8px 32px rgba(0,0,0,0.15); 
+                max-width: 400px; 
+                width: 100%; 
+                backdrop-filter: blur(10px); 
+                border: 1px solid rgba(255, 255, 255, 0.2); 
+            }
+            .logo { 
+                text-align: center; 
+                margin-bottom: 30px; 
+            }
+            .logo h1 { 
+                color: #1f2937; 
+                font-size: 28px; 
+                margin: 0; 
+                background: linear-gradient(135deg, #f97316, #2563eb); 
+                -webkit-background-clip: text; 
+                -webkit-text-fill-color: transparent; 
+                background-clip: text; 
+            }
+            .logo p { 
+                color: #6b7280; 
+                margin: 5px 0 0 0; 
+                font-size: 14px; 
+            }
+            .form-group { 
+                margin-bottom: 20px; 
+            }
+            label { 
+                display: block; 
+                margin-bottom: 8px; 
+                color: #374151; 
+                font-weight: 600; 
+            }
+            input[type="text"], input[type="password"] { 
+                width: 100%; 
+                padding: 12px; 
+                border: 2px solid #e5e7eb; 
+                border-radius: 8px; 
+                font-size: 16px; 
+                transition: all 0.3s ease; 
+                box-sizing: border-box; 
+            }
+            input[type="text"]:focus, input[type="password"]:focus { 
+                outline: none; 
+                border-color: #2563eb; 
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); 
+            }
+            .login-btn { 
+                width: 100%; 
+                padding: 12px; 
+                background: linear-gradient(135deg, #2563eb, #1d4ed8); 
+                color: white; 
+                border: none; 
+                border-radius: 8px; 
+                font-size: 16px; 
+                font-weight: 600; 
+                cursor: pointer; 
+                transition: all 0.3s ease; 
+                box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2); 
+            }
+            .login-btn:hover { 
+                background: linear-gradient(135deg, #1d4ed8, #1e40af); 
+                transform: translateY(-2px); 
+                box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3); 
+            }
+            .error { 
+                color: #ef4444; 
+                font-size: 14px; 
+                margin-top: 10px; 
+                text-align: center; 
+            }
+            .credentials { 
+                background: rgba(249, 115, 22, 0.1); 
+                border: 1px solid rgba(249, 115, 22, 0.2); 
+                padding: 15px; 
+                border-radius: 8px; 
+                margin-bottom: 20px; 
+            }
+            .credentials h3 { 
+                margin: 0 0 10px 0; 
+                color: #ea580c; 
+                font-size: 14px; 
+            }
+            .credentials p { 
+                margin: 5px 0; 
+                font-family: monospace; 
+                font-size: 13px; 
+                color: #9a3412; 
+            }
+        </style>
+    </head>
+    <body>
+        <div class="login-container">
+            <div class="logo">
+                <h1>🦀 File Manager</h1>
+                <p>FirxTTech Solutions</p>
             </div>
-            <div class="form-group">
-                <label for="password">Password:</label>
-                <input type="password" id="password" name="password" required>
+            
+            <div class="credentials">
+                <h3>🔑 Demo Credentials</h3>
+                <p>👤 Username: admin</p>
+                <p>🔐 Password: admin123</p>
             </div>
-            <button type="submit" class="login-btn">Login</button>
-        </form>
-        <div class="default-creds">
-            <strong>Default credentials:</strong><br>
-            Username: admin<br>
-            Password: admin123
+            
+            <form method="POST" action="/login">
+                <div class="form-group">
+                    <label for="username">👤 Username</label>
+                    <input type="text" id="username" name="username" required value="admin">
+                </div>
+                <div class="form-group">
+                    <label for="password">🔐 Password</label>
+                    <input type="password" id="password" name="password" required value="admin123">
+                </div>
+                <button type="submit" class="login-btn">🚀 Login</button>
+            </form>
         </div>
-    </div>
-</body>
-</html>"#.to_string()
+    </body>
+    </html>
+    "#.to_string()
 }

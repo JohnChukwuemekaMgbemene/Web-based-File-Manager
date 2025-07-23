@@ -1,7 +1,6 @@
 use crate::bodies::{BytesBody, StringBody};
 use crate::file_browser::{generate_directory_html, get_directory_entries};
-use hyper::{Request, Response, StatusCode};
-use hyper::body::Incoming;
+use hyper::{Response, StatusCode};
 use std::path::Path;
 use std::fs;
 

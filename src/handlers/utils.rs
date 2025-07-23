@@ -1,6 +1,6 @@
 use crate::bodies::StringBody;
 use hyper::body::Body;
-use hyper::{Response, StatusCode};
+use hyper::Response;
 use std::env;
 
 // Re-export the BoxBody type for other handler modules

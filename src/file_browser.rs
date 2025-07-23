@@ -140,8 +140,7 @@ pub fn generate_directory_html(entries: &[FileEntry], url_path: &str) -> String 
         <a href="/upload" class="upload-btn">Upload</a>
     </div>
     <div class="grid-container">
-"#, url_path, 
-    if url_path != "/" { 
+"#, url_path, if url_path != "/" {
         format!("&raquo; {}", url_path.replace("/browse", "").replace("/", " / "))
     } else { 
         String::new() 
@@ -169,8 +168,23 @@ pub fn generate_directory_html(entries: &[FileEntry], url_path: &str) -> String 
             </div>
             "#, folder_url, entry.name));
         } else {
-            let file_url = format!("/file{}/{}", url_path.trim_start_matches("/browse"), url_encode(&entry.name));
-            let download_url = format!("{}?download=true", file_url);
+            let file_url = {
+                let path_part = url_path.trim_start_matches("/browse");
+                if path_part.is_empty() || path_part == "/" {
+                    format!("/file/{}", url_encode(&entry.name))
+                } else {
+                    format!("/file{}/{}", path_part, url_encode(&entry.name))
+                }
+            };
+            // File download logic
+            let download_url = format!("/download{}", 
+                if url_path.trim_start_matches("/browse").is_empty() || url_path.trim_start_matches("/browse") == "/" {
+                    format!("/{}", url_encode(&entry.name))
+                } else {
+                    format!("{}/{}", url_path.trim_start_matches("/browse"), url_encode(&entry.name))
+                }
+            );
+
             let size_str = entry.size.map(format_file_size).unwrap_or_else(|| "Unknown".to_string());
             
             // Determine file type class for styling
@@ -195,6 +209,7 @@ pub fn generate_directory_html(entries: &[FileEntry], url_path: &str) -> String 
                     <div class="file-icon"></div>
                     <div class="item-name">{}</div>
                     <div class="item-info">{}</div>
+                    
                 </div>
                 "#, file_type_class, download_url, entry.name, size_str));
             }

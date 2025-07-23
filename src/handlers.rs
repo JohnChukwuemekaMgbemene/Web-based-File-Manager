@@ -119,6 +119,7 @@ pub async fn handle_request(
         (Method::GET, "/") => home_page(),
         (Method::GET, path) if path.starts_with("/browse") => browse_directory(path).await,
         (Method::GET, path) if path.starts_with("/file") => serve_file(path).await,
+        (Method::GET, path) if path.starts_with("/download") => serve_download(path).await,
         (Method::GET, "/upload") => upload_page(),
         (Method::POST, "/upload") => handle_upload_request(req).await,
         (Method::POST, "/upload/start") => start_resumable_upload(req).await,
@@ -350,6 +351,72 @@ async fn serve_file(path: &str) -> Result<Response<BoxBody>, Box<dyn std::error:
                     response_builder = response_builder
                         .header("Content-Disposition", format!("attachment; filename=\"{}\"", filename_str));
                 }
+            }
+        }
+        
+        Ok(response_builder
+            .body(Box::new(BytesBody::new(contents)) as BoxBody)
+            .unwrap())
+    } else {
+        Ok(Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(Box::new(StringBody::new("File not found".to_string())) as BoxBody)
+            .unwrap())
+    }
+}
+
+async fn serve_download(path: &str) -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send + Sync>> {
+    let home_dir = get_home_directory();
+    let fs_path = path.strip_prefix("/download").unwrap_or("/");
+    let fs_path = if fs_path.starts_with('/') { &fs_path[1..] } else { fs_path };
+    
+    // Decode the URL-encoded path
+    let decoded_fs_path = url_decode(fs_path);
+    
+    let full_path = format!("{}/{}", home_dir, decoded_fs_path.replace("/", "\\"));
+    let file_path = Path::new(&full_path);
+    
+    // Check if trying to access system file
+    if let Some(file_name) = file_path.file_name() {
+        if let Some(name_str) = file_name.to_str() {
+            #[cfg(windows)]
+            let is_hidden = {
+                use std::os::windows::fs::MetadataExt;
+                if let Ok(metadata) = file_path.metadata() {
+                    const FILE_ATTRIBUTE_HIDDEN: u32 = 0x02;
+                    const FILE_ATTRIBUTE_SYSTEM: u32 = 0x04;
+                    let attrs = metadata.file_attributes();
+                    (attrs & FILE_ATTRIBUTE_HIDDEN) != 0 || (attrs & FILE_ATTRIBUTE_SYSTEM) != 0
+                } else {
+                    false
+                }
+            };
+            
+            #[cfg(not(windows))]
+            let is_hidden = false;
+            
+            if is_system_file_or_folder(name_str, is_hidden) {
+                return Ok(Response::builder()
+                    .status(StatusCode::FORBIDDEN)
+                    .body(Box::new(StringBody::new("Access to system files is not allowed".to_string())) as BoxBody)
+                    .unwrap());
+            }
+        }
+    }
+    
+    if file_path.exists() && file_path.is_file() {
+        let contents = fs::read(file_path)?;
+        let mime_type = mime_guess::from_path(file_path)
+            .first_or_octet_stream();
+        
+        let mut response_builder = Response::builder()
+            .header("Content-Type", mime_type.as_ref());
+        
+        // Always add download headers for this route
+        if let Some(filename) = file_path.file_name() {
+            if let Some(filename_str) = filename.to_str() {
+                response_builder = response_builder
+                    .header("Content-Disposition", format!("attachment; filename=\"{}\"", filename_str));
             }
         }
         

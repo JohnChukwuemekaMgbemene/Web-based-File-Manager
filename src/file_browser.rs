@@ -84,6 +84,7 @@ fn is_viewable_file(filename: &str) -> bool {
 }
 
 // Update the generate_directory_html function
+
 pub fn generate_directory_html(entries: &[FileEntry], url_path: &str) -> String {
     let mut html = format!(r#"<!DOCTYPE html>
 <html>
@@ -91,14 +92,47 @@ pub fn generate_directory_html(entries: &[FileEntry], url_path: &str) -> String 
     <title>FirxTTech Solutions - {}</title>
     <meta charset="UTF-8">
     <style>
-        body {{ font-family: Arial, sans-serif; margin: 20px; background: linear-gradient(135deg, #f97316 0%, #2563eb 100%); min-height: 100vh; }}
+        body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #f97316 0%, #2563eb 100%); min-height: 100vh; }}
         .header {{ background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin-bottom: 20px; position: relative; backdrop-filter: blur(10px); }}
-        .breadcrumb {{ margin-bottom: 10px; font-size: 14px; color: #374151; }}
+        
+        /* Hamburger Menu Styles */
+        .hamburger-menu {{ position: absolute; top: 20px; left: 20px; z-index: 1000; }}
+        .hamburger-btn {{ background: none; border: none; cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.3s ease; }}
+        .hamburger-btn:hover {{ background: rgba(37, 99, 235, 0.1); }}
+        .hamburger-icon {{ width: 24px; height: 20px; position: relative; transform: rotate(0deg); transition: .5s ease-in-out; }}
+        .hamburger-icon span {{ display: block; position: absolute; height: 3px; width: 100%; background: #2563eb; border-radius: 9px; opacity: 1; left: 0; transform: rotate(0deg); transition: .25s ease-in-out; }}
+        .hamburger-icon span:nth-child(1) {{ top: 0px; }}
+        .hamburger-icon span:nth-child(2) {{ top: 8px; }}
+        .hamburger-icon span:nth-child(3) {{ top: 16px; }}
+        
+        /* Hamburger Animation */
+        .hamburger-btn.active .hamburger-icon span:nth-child(1) {{ top: 8px; transform: rotate(135deg); }}
+        .hamburger-btn.active .hamburger-icon span:nth-child(2) {{ opacity: 0; left: -60px; }}
+        .hamburger-btn.active .hamburger-icon span:nth-child(3) {{ top: 8px; transform: rotate(-135deg); }}
+        
+        /* Dropdown Menu */
+        .dropdown-menu {{ position: absolute; top: 60px; left: 20px; background: rgba(255, 255, 255, 0.98); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); min-width: 200px; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s ease; z-index: 999; }}
+        .dropdown-menu.show {{ opacity: 1; visibility: visible; transform: translateY(0); }}
+        .dropdown-menu::before {{ content: ''; position: absolute; top: -8px; left: 20px; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 8px solid rgba(255, 255, 255, 0.98); }}
+        
+        .menu-item {{ padding: 12px 20px; border-bottom: 1px solid rgba(0,0,0,0.1); cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 12px; color: #374151; }}
+        .menu-item:last-child {{ border-bottom: none; }}
+        .menu-item:hover {{ background: rgba(37, 99, 235, 0.1); color: #2563eb; }}
+        .menu-item:first-child {{ border-radius: 12px 12px 0 0; }}
+        .menu-item:last-child {{ border-radius: 0 0 12px 12px; }}
+        
+        .menu-icon {{ font-size: 16px; width: 20px; text-align: center; }}
+        .menu-text {{ font-weight: 500; }}
+        .menu-shortcut {{ margin-left: auto; font-size: 12px; color: #9ca3af; }}
+        
+        .menu-separator {{ height: 1px; background: rgba(0,0,0,0.1); margin: 8px 0; }}
+        
+        .breadcrumb {{ margin-bottom: 10px; font-size: 14px; color: #374151; margin-left: 60px; }}
         .breadcrumb a {{ color: #2563eb; text-decoration: none; font-weight: 500; }}
         .breadcrumb a:hover {{ text-decoration: underline; color: #1d4ed8; }}
         .upload-btn {{ position: absolute; top: 30px; right: 20px; background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 10px 20px; border: none; border-radius: 8px; text-decoration: none; font-size: 14px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(249, 115, 22, 0.3); }}
         .upload-btn:hover {{ background: linear-gradient(135deg, #ea580c, #dc2626); transform: translateY(-2px); box-shadow: 0 4px 20px rgba(249, 115, 22, 0.4); }}
-        h1 {{ color: #1f2937; margin: 0; text-align: left; font-size: 28px; }}
+        h1 {{ color: #1f2937; margin: 0; text-align: center; font-size: 28px; }}
         .grid-container {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; padding: 0; }}
         .grid-item {{ background: rgba(113, 152, 224, 0.9); border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer; backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.2); }}
         .grid-item:hover {{ transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); background: rgba(255, 255, 255, 0.95); }}
@@ -129,10 +163,69 @@ pub fn generate_directory_html(entries: &[FileEntry], url_path: &str) -> String 
         .text-file .file-icon::before {{ content: '📝'; background: linear-gradient(135deg, #fef3c7, #fde68a); }}
         .pdf-file .file-icon {{ background: linear-gradient(135deg, #dc2626, #b91c1c); }}
         .pdf-file .file-icon::before {{ content: '📄'; background: linear-gradient(135deg, #fecaca, #fca5a5); }}
+        
+        /* Overlay for closing menu */
+        .menu-overlay {{ position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: transparent; z-index: 998; display: none; }}
+        .menu-overlay.show {{ display: block; }}
     </style>
 </head>
 <body>
     <div class="header">
+        <!-- Hamburger Menu -->
+        <div class="hamburger-menu">
+            <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMenu()">
+                <div class="hamburger-icon">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </button>
+            
+            <div class="dropdown-menu" id="dropdownMenu">
+                <div class="menu-item" onclick="goHome()">
+                    <span class="menu-icon">🏠</span>
+                    <span class="menu-text">Home</span>
+                    <span class="menu-shortcut">Ctrl+H</span>
+                </div>
+                <div class="menu-item" onclick="refreshPage()">
+                    <span class="menu-icon">🔄</span>
+                    <span class="menu-text">Refresh</span>
+                    <span class="menu-shortcut">F5</span>
+                </div>
+                <div class="menu-separator"></div>
+                <div class="menu-item" onclick="showUploadDialog()">
+                    <span class="menu-icon">📤</span>
+                    <span class="menu-text">Upload Files</span>
+                    <span class="menu-shortcut">Ctrl+U</span>
+                </div>
+                <div class="menu-item" onclick="createNewFolder()">
+                    <span class="menu-icon">📁</span>
+                    <span class="menu-text">New Folder</span>
+                    <span class="menu-shortcut">Ctrl+N</span>
+                </div>
+                <div class="menu-separator"></div>
+                <div class="menu-item" onclick="showSettings()">
+                    <span class="menu-icon">⚙️</span>
+                    <span class="menu-text">Settings</span>
+                    <span class="menu-shortcut">Ctrl+,</span>
+                </div>
+                <div class="menu-item" onclick="showHelp()">
+                    <span class="menu-icon">❓</span>
+                    <span class="menu-text">Help & About</span>
+                    <span class="menu-shortcut">F1</span>
+                </div>
+                <div class="menu-separator"></div>
+                <div class="menu-item" onclick="logout()">
+                    <span class="menu-icon">🚪</span>
+                    <span class="menu-text">Logout</span>
+                    <span class="menu-shortcut">Ctrl+L</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Overlay for closing menu -->
+        <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+        
         <div class="breadcrumb">
             <a href="/">Home</a> {} 
         </div>
@@ -140,7 +233,140 @@ pub fn generate_directory_html(entries: &[FileEntry], url_path: &str) -> String 
         <a href="/upload" class="upload-btn">Upload</a>
     </div>
     <div class="grid-container">
-"#, url_path, if url_path != "/" {
+
+    <script>
+        let isMenuOpen = false;
+        
+        function toggleMenu() {{
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            const dropdownMenu = document.getElementById('dropdownMenu');
+            const menuOverlay = document.getElementById('menuOverlay');
+            
+            isMenuOpen = !isMenuOpen;
+            
+            if (isMenuOpen) {{
+                hamburgerBtn.classList.add('active');
+                dropdownMenu.classList.add('show');
+                menuOverlay.classList.add('show');
+            }} else {{
+                hamburgerBtn.classList.remove('active');
+                dropdownMenu.classList.remove('show');
+                menuOverlay.classList.remove('show');
+            }}
+        }}
+        
+        function closeMenu() {{
+            if (isMenuOpen) {{
+                toggleMenu();
+            }}
+        }}
+        
+        // Menu action functions
+        function goHome() {{
+            window.location.href = '/';
+            closeMenu();
+        }}
+        
+        function refreshPage() {{
+            window.location.reload();
+            closeMenu();
+        }}
+        
+        function showUploadDialog() {{
+            window.location.href = '/upload';
+            closeMenu();
+        }}
+        
+        function createNewFolder() {{
+            const folderName = prompt('Enter folder name:');
+            if (folderName) {{
+                // TODO: Implement create folder functionality
+                alert('Create folder functionality will be implemented soon!');
+            }}
+            closeMenu();
+        }}
+        
+        function showSettings() {{
+            // TODO: Implement settings modal/page
+            alert('Settings panel will be implemented soon!');
+            closeMenu();
+        }}
+        
+        function showHelp() {{
+            const helpText = `
+Web-based File Manager v1.0
+
+Keyboard Shortcuts:
+• Ctrl+H: Go to Home
+• F5: Refresh current page
+• Ctrl+U: Upload files
+• Ctrl+N: New folder
+• Ctrl+,: Settings
+• F1: Help
+• Ctrl+L: Logout
+
+Built with Rust 🦀 for maximum performance and security.
+System files are automatically filtered for your protection.
+
+FirxTTech Solutions © 2025
+            `;
+            alert(helpText);
+            closeMenu();
+        }}
+        
+        function logout() {{
+            if (confirm('Are you sure you want to logout?')) {{
+                window.location.href = '/logout';
+            }}
+            closeMenu();
+        }}
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {{
+            if (e.ctrlKey || e.metaKey) {{
+                switch(e.key) {{
+                    case 'h':
+                        e.preventDefault();
+                        goHome();
+                        break;
+                    case 'u':
+                        e.preventDefault();
+                        showUploadDialog();
+                        break;
+                    case 'n':
+                        e.preventDefault();
+                        createNewFolder();
+                        break;
+                    case ',':
+                        e.preventDefault();
+                        showSettings();
+                        break;
+                    case 'l':
+                        e.preventDefault();
+                        logout();
+                        break;
+                }}
+            }} else if (e.key === 'F5') {{
+                e.preventDefault();
+                refreshPage();
+            }} else if (e.key === 'F1') {{
+                e.preventDefault();
+                showHelp();
+            }} else if (e.key === 'Escape') {{
+                closeMenu();
+            }}
+        }});
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {{
+            const hamburgerMenu = document.querySelector('.hamburger-menu');
+            if (!hamburgerMenu.contains(e.target) && isMenuOpen) {{
+                closeMenu();
+            }}
+        }});
+    </script>
+"#, url_path, 
+    if url_path != "/" { 
         format!("&raquo; {}", url_path.replace("/browse", "").replace("/", " / "))
     } else { 
         String::new() 
@@ -176,7 +402,7 @@ pub fn generate_directory_html(entries: &[FileEntry], url_path: &str) -> String 
                     format!("/file{}/{}", path_part, url_encode(&entry.name))
                 }
             };
-            // File download logic
+            
             let download_url = format!("/download{}", 
                 if url_path.trim_start_matches("/browse").is_empty() || url_path.trim_start_matches("/browse") == "/" {
                     format!("/{}", url_encode(&entry.name))
@@ -184,13 +410,10 @@ pub fn generate_directory_html(entries: &[FileEntry], url_path: &str) -> String 
                     format!("{}/{}", url_path.trim_start_matches("/browse"), url_encode(&entry.name))
                 }
             );
-
-            let size_str = entry.size.map(format_file_size).unwrap_or_else(|| "Unknown".to_string());
             
-            // Determine file type class for styling
+            let size_str = entry.size.map(format_file_size).unwrap_or_else(|| "Unknown".to_string());
             let file_type_class = get_file_type_class(&entry.name);
             
-            // Check if file is viewable in browser
             if is_viewable_file(&entry.name) {
                 html.push_str(&format!(r#"
                 <div class="grid-item {}">
@@ -209,7 +432,6 @@ pub fn generate_directory_html(entries: &[FileEntry], url_path: &str) -> String 
                     <div class="file-icon"></div>
                     <div class="item-name">{}</div>
                     <div class="item-info">{}</div>
-                    
                 </div>
                 "#, file_type_class, download_url, entry.name, size_str));
             }

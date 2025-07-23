@@ -13,8 +13,34 @@ pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send
     <head>
         <title>Rust Web Server</title>
         <style>
-            body { font-family: Arial, sans-serif; margin: 20px; background: linear-gradient(135deg, #f97316 0%, #2563eb 100%); min-height: 100vh; }
-            .container { max-width: 800px; margin: 0 auto; background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #f97316 0%, #2563eb 100%); min-height: 100vh; }
+            .container { max-width: 800px; margin: 0 auto; background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); position: relative; }
+            
+            /* Hamburger Menu */
+            .hamburger-menu { position: absolute; top: 20px; left: 20px; z-index: 1000; }
+            .hamburger-btn { background: none; border: none; cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.3s ease; }
+            .hamburger-btn:hover { background: rgba(37, 99, 235, 0.1); }
+            .hamburger-icon { width: 24px; height: 20px; position: relative; transform: rotate(0deg); transition: .5s ease-in-out; }
+            .hamburger-icon span { display: block; position: absolute; height: 3px; width: 100%; background: #2563eb; border-radius: 9px; opacity: 1; left: 0; transform: rotate(0deg); transition: .25s ease-in-out; }
+            .hamburger-icon span:nth-child(1) { top: 0px; }
+            .hamburger-icon span:nth-child(2) { top: 8px; }
+            .hamburger-icon span:nth-child(3) { top: 16px; }
+            .hamburger-btn.active .hamburger-icon span:nth-child(1) { top: 8px; transform: rotate(135deg); }
+            .hamburger-btn.active .hamburger-icon span:nth-child(2) { opacity: 0; left: -60px; }
+            .hamburger-btn.active .hamburger-icon span:nth-child(3) { top: 8px; transform: rotate(-135deg); }
+            
+            .dropdown-menu { position: absolute; top: 60px; left: 0; background: rgba(255, 255, 255, 0.98); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); min-width: 200px; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s ease; z-index: 999; }
+            .dropdown-menu.show { opacity: 1; visibility: visible; transform: translateY(0); }
+            .menu-item { padding: 12px 20px; border-bottom: 1px solid rgba(0,0,0,0.1); cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 12px; color: #374151; }
+            .menu-item:last-child { border-bottom: none; }
+            .menu-item:hover { background: rgba(37, 99, 235, 0.1); color: #2563eb; }
+            .menu-icon { font-size: 16px; width: 20px; text-align: center; }
+            .menu-text { font-weight: 500; }
+            .menu-shortcut { margin-left: auto; font-size: 12px; color: #9ca3af; }
+            .menu-separator { height: 1px; background: rgba(0,0,0,0.1); margin: 8px 0; }
+            .menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: transparent; z-index: 998; display: none; }
+            .menu-overlay.show { display: block; }
+            
             h1 { color: #1f2937; text-align: center; font-size: 36px; margin-bottom: 20px; background: linear-gradient(135deg, #f97316, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
             .welcome-text { text-align: center; color: #6b7280; font-size: 18px; margin-bottom: 40px; }
             .nav { text-align: center; margin-top: 30px; }
@@ -34,6 +60,55 @@ pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send
     </head>
     <body>
         <div class="container">
+            <!-- Hamburger Menu -->
+            <div class="hamburger-menu">
+                <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMenu()">
+                    <div class="hamburger-icon">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </button>
+                
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <div class="menu-item" onclick="refreshPage()">
+                        <span class="menu-icon">🔄</span>
+                        <span class="menu-text">Refresh</span>
+                        <span class="menu-shortcut">F5</span>
+                    </div>
+                    <div class="menu-separator"></div>
+                    <div class="menu-item" onclick="showUploadDialog()">
+                        <span class="menu-icon">📤</span>
+                        <span class="menu-text">Upload Files</span>
+                        <span class="menu-shortcut">Ctrl+U</span>
+                    </div>
+                    <div class="menu-item" onclick="browseFolders()">
+                        <span class="menu-icon">📁</span>
+                        <span class="menu-text">Browse Files</span>
+                        <span class="menu-shortcut">Ctrl+B</span>
+                    </div>
+                    <div class="menu-separator"></div>
+                    <div class="menu-item" onclick="showSettings()">
+                        <span class="menu-icon">⚙️</span>
+                        <span class="menu-text">Settings</span>
+                        <span class="menu-shortcut">Ctrl+,</span>
+                    </div>
+                    <div class="menu-item" onclick="showHelp()">
+                        <span class="menu-icon">❓</span>
+                        <span class="menu-text">Help & About</span>
+                        <span class="menu-shortcut">F1</span>
+                    </div>
+                    <div class="menu-separator"></div>
+                    <div class="menu-item" onclick="logout()">
+                        <span class="menu-icon">🚪</span>
+                        <span class="menu-text">Logout</span>
+                        <span class="menu-shortcut">Ctrl+L</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+            
             <h1>Web-based File Browser</h1>
             <p class="welcome-text">Your personal file browser built for easy file sharing and transfer</p>
             <div class="nav">
@@ -58,6 +133,74 @@ pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send
                 </div>
             </div>
         </div>
+
+        <script>
+            let isMenuOpen = false;
+            
+            function toggleMenu() {
+                const hamburgerBtn = document.getElementById('hamburgerBtn');
+                const dropdownMenu = document.getElementById('dropdownMenu');
+                const menuOverlay = document.getElementById('menuOverlay');
+                
+                isMenuOpen = !isMenuOpen;
+                
+                if (isMenuOpen) {
+                    hamburgerBtn.classList.add('active');
+                    dropdownMenu.classList.add('show');
+                    menuOverlay.classList.add('show');
+                } else {
+                    hamburgerBtn.classList.remove('active');
+                    dropdownMenu.classList.remove('show');
+                    menuOverlay.classList.remove('show');
+                }
+            }
+            
+            function closeMenu() {
+                if (isMenuOpen) {
+                    toggleMenu();
+                }
+            }
+            
+            function refreshPage() { window.location.reload(); closeMenu(); }
+            function showUploadDialog() { window.location.href = '/upload'; closeMenu(); }
+            function browseFolders() { window.location.href = '/browse'; closeMenu(); }
+            function showSettings() { alert('Settings panel coming soon!'); closeMenu(); }
+            function showHelp() { 
+                alert('Web-based File Manager v1.0\\n\\nBuilt with Rust 🦀\\nFirxTTech Solutions © 2025'); 
+                closeMenu(); 
+            }
+            function logout() { 
+                if (confirm('Are you sure you want to logout?')) {
+                    window.location.href = '/logout';
+                }
+                closeMenu(); 
+            }
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey) {
+                    switch(e.key) {
+                        case 'u': e.preventDefault(); showUploadDialog(); break;
+                        case 'b': e.preventDefault(); browseFolders(); break;
+                        case ',': e.preventDefault(); showSettings(); break;
+                        case 'l': e.preventDefault(); logout(); break;
+                    }
+                } else if (e.key === 'F5') {
+                    e.preventDefault(); refreshPage();
+                } else if (e.key === 'F1') {
+                    e.preventDefault(); showHelp();
+                } else if (e.key === 'Escape') {
+                    closeMenu();
+                }
+            });
+            
+            document.addEventListener('click', function(e) {
+                const hamburgerMenu = document.querySelector('.hamburger-menu');
+                if (!hamburgerMenu.contains(e.target) && isMenuOpen) {
+                    closeMenu();
+                }
+            });
+        </script>
     </body>
     </html>
     "#;

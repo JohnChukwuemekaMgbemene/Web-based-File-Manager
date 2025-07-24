@@ -17,37 +17,49 @@ pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send
         <meta charset="UTF-8">
         <style>
             body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #f97316 0%, #2563eb 100%); min-height: 100vh; }
-            .container { max-width: 800px; margin: 0 auto; background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); position: relative; }
+            .container { max-width: 800px; margin: 0 auto; background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); position: relative; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); min-height: 500px; overflow: hidden; }
             
-            /* Hamburger Menu */
             .hamburger-menu { position: absolute; top: 20px; left: 20px; z-index: 9999; }
-            .hamburger-btn { background: none; border: none; cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.3s ease; position: relative; z-index: 10000; }
-            .hamburger-btn:hover { background: rgba(37, 99, 235, 0.1); }
-            .hamburger-icon { width: 24px; height: 20px; position: relative; transform: rotate(0deg); transition: .5s ease-in-out; }
-            .hamburger-icon span { display: block; position: absolute; height: 3px; width: 100%; background: #2563eb; border-radius: 9px; opacity: 1; left: 0; transform: rotate(0deg); transition: .25s ease-in-out; }
+            .hamburger-btn { background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.2); cursor: pointer; padding: 12px; border-radius: 12px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2); backdrop-filter: blur(10px); }
+            .hamburger-btn:hover { background: rgba(37, 99, 235, 0.2); transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3); }
+            .hamburger-icon { width: 22px; height: 16px; position: relative; transform: rotate(0deg); transition: .3s ease-in-out; }
+            .hamburger-icon span { display: block; position: absolute; height: 2px; width: 100%; background: #2563eb; border-radius: 2px; opacity: 1; left: 0; transform: rotate(0deg); transition: .3s cubic-bezier(0.4, 0, 0.2, 1); }
             .hamburger-icon span:nth-child(1) { top: 0px; }
-            .hamburger-icon span:nth-child(2) { top: 8px; }
-            .hamburger-icon span:nth-child(3) { top: 16px; }
-            .hamburger-btn.active .hamburger-icon span:nth-child(1) { top: 8px; transform: rotate(135deg); }
-            .hamburger-btn.active .hamburger-icon span:nth-child(2) { opacity: 0; left: -60px; }
-            .hamburger-btn.active .hamburger-icon span:nth-child(3) { top: 8px; transform: rotate(-135deg); }
+            .hamburger-icon span:nth-child(2) { top: 7px; }
+            .hamburger-icon span:nth-child(3) { top: 14px; }
+            .hamburger-btn.active { background: rgba(37, 99, 235, 0.2); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4); }
+            .hamburger-btn.active .hamburger-icon span:nth-child(1) { top: 7px; transform: rotate(45deg); }
+            .hamburger-btn.active .hamburger-icon span:nth-child(2) { opacity: 0; transform: translateX(-20px); }
+            .hamburger-btn.active .hamburger-icon span:nth-child(3) { top: 7px; transform: rotate(-45deg); }
             
-            .dropdown-menu { position: fixed; top: 80px; left: 40px; background: rgba(255, 255, 255, 0.98); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.25); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.3); min-width: 220px; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s ease; z-index: 9999; max-height: 80vh; overflow-y: auto; }
-            .dropdown-menu.show { opacity: 1; visibility: visible; transform: translateY(0); }
-            .dropdown-menu::before { content: ''; position: absolute; top: -8px; left: 20px; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 8px solid rgba(255, 255, 255, 0.98); z-index: 10000; }
+            .menu-container { position: absolute; top: 0; left: 0; width: 380px; height: 100%; background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(240, 245, 255, 0.95)); backdrop-filter: blur(20px); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 12px 40px rgba(0,0,0,0.2); opacity: 0; visibility: hidden; transform: translateX(-100%); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; display: flex; flex-direction: column; }
+            .menu-container.show { opacity: 1; visibility: visible; transform: translateX(0); }
             
-            .menu-item { padding: 14px 20px; border-bottom: 1px solid rgba(0,0,0,0.08); cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 12px; color: #374151; background: rgba(255, 255, 255, 0.9); position: relative; z-index: 9999; }
+            .menu-header { background: linear-gradient(135deg, #f97316, #2563eb); color: white; padding: 20px 24px; text-align: center; position: relative; flex-shrink: 0; border-radius: 16px 16px 0 0; }
+            .menu-title { font-size: 22px; font-weight: 700; margin: 0; display: flex; align-items: center; justify-content: center; gap: 10px; }
+            .menu-subtitle { font-size: 13px; opacity: 0.9; margin: 6px 0 0; font-weight: 400; }
+            
+            .menu-list { flex: 1; padding: 0; margin: 0; list-style: none; background: transparent; overflow-y: auto; }
+            .menu-item { border-bottom: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.3s ease; cursor: pointer; position: relative; overflow: hidden; }
             .menu-item:last-child { border-bottom: none; }
-            .menu-item:hover { background: rgba(37, 99, 235, 0.1); color: #2563eb; transform: translateX(2px); }
-            .menu-item:first-child { border-radius: 12px 12px 0 0; }
-            .menu-item:last-child { border-radius: 0 0 12px 12px; }
-            .menu-icon { font-size: 16px; width: 20px; text-align: center; }
-            .menu-text { font-weight: 500; flex: 1; }
-            .menu-shortcut { font-size: 11px; color: #9ca3af; background: rgba(156, 163, 175, 0.1); padding: 2px 6px; border-radius: 4px; }
-            .menu-separator { height: 1px; background: rgba(0,0,0,0.1); margin: 6px 0; }
+            .menu-item:hover { background: rgba(255, 255, 255, 0.8); transform: translateX(6px); }
+            .menu-item::before { content: ''; position: absolute; left: 0; top: 0; width: 4px; height: 100%; background: transparent; transition: all 0.3s ease; }
+            .menu-item:hover::before { background: linear-gradient(135deg, #f97316, #2563eb); }
+            .menu-item.primary::before { background: rgba(37, 99, 235, 0.3); }
+            .menu-item.secondary::before { background: rgba(249, 115, 22, 0.3); }
+            .menu-item.danger::before { background: rgba(220, 38, 38, 0.3); }
             
-            .menu-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.2); z-index: 9998; display: none; backdrop-filter: blur(2px); }
-            .menu-overlay.show { display: block; }
+            .menu-link { display: flex; align-items: center; padding: 16px 20px; text-decoration: none; color: #1f2937; transition: all 0.3s ease; }
+            .menu-icon { font-size: 20px; margin-right: 14px; flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)); }
+            .menu-text { flex: 1; }
+            .menu-title-text { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+            .menu-desc { font-size: 11px; color: #6b7280; }
+            .menu-shortcut { background: rgba(107, 114, 128, 0.1); color: #6b7280; padding: 3px 7px; border-radius: 5px; font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+            
+            .content-wrapper { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); position: relative; z-index: 1; }
+            .content-wrapper.menu-open { filter: blur(3px); opacity: 0.7; transform: scale(0.98); pointer-events: none; }
+            
+            .main-content { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); opacity: 1; transform: scale(1); }
             
             h1 { color: #1f2937; text-align: center; font-size: 36px; margin-bottom: 20px; background: linear-gradient(135deg, #f97316, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
             .welcome-text { text-align: center; color: #6b7280; font-size: 18px; margin-bottom: 40px; }
@@ -64,11 +76,13 @@ pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send
             .feature h3 { color: #1f2937; margin-bottom: 10px; }
             .feature p { color: #6b7280; font-size: 14px; }
             .feature-icon { font-size: 32px; margin-bottom: 15px; }
+            
+            @media (max-width: 768px) { .container { padding: 20px; margin: 10px; } .menu-container { width: 320px; } .menu-header { padding: 16px 20px; } .menu-title { font-size: 20px; } .menu-subtitle { font-size: 12px; } .menu-link { padding: 14px 16px; } .menu-icon { font-size: 18px; margin-right: 12px; } .menu-title-text { font-size: 14px; } .menu-desc { font-size: 10px; } .menu-shortcut { font-size: 9px; padding: 2px 5px; } .hamburger-menu { top: 15px; left: 15px; } }
+            @media (max-width: 480px) { .container { padding: 15px; margin: 5px; } .menu-container { width: 280px; } .menu-header { padding: 14px 18px; } .menu-title { font-size: 18px; gap: 8px; } .menu-subtitle { font-size: 11px; } .menu-link { padding: 12px 14px; } .menu-icon { font-size: 16px; margin-right: 10px; } .menu-title-text { font-size: 13px; } .menu-desc { font-size: 9px; } .menu-shortcut { font-size: 8px; padding: 2px 4px; } .hamburger-menu { top: 12px; left: 12px; } }
         </style>
     </head>
     <body>
         <div class="container">
-            <!-- Hamburger Menu -->
             <div class="hamburger-menu">
                 <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMenu()">
                     <div class="hamburger-icon">
@@ -77,67 +91,108 @@ pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send
                         <span></span>
                     </div>
                 </button>
+            </div>
+            
+            <div class="menu-container" id="menuContainer">
+                <div class="menu-header">
+                    <h2 class="menu-title">🦀 File Manager</h2>
+                    <p class="menu-subtitle">Choose an action</p>
+                </div>
                 
-                <div class="dropdown-menu" id="dropdownMenu">
-                    <div class="menu-item" onclick="refreshPage()">
-                        <span class="menu-icon">🔄</span>
-                        <span class="menu-text">Refresh</span>
-                        <span class="menu-shortcut">F5</span>
-                    </div>
-                    <div class="menu-separator"></div>
-                    <div class="menu-item" onclick="showUploadDialog()">
-                        <span class="menu-icon">📤</span>
-                        <span class="menu-text">Upload Files</span>
-                        <span class="menu-shortcut">Ctrl+U</span>
-                    </div>
-                    <div class="menu-item" onclick="browseFolders()">
-                        <span class="menu-icon">📁</span>
-                        <span class="menu-text">Browse Files</span>
-                        <span class="menu-shortcut">Ctrl+B</span>
-                    </div>
-                    <div class="menu-separator"></div>
-                    <div class="menu-item" onclick="showSettings()">
-                        <span class="menu-icon">⚙️</span>
-                        <span class="menu-text">Settings</span>
-                        <span class="menu-shortcut">Ctrl+,</span>
-                    </div>
-                    <div class="menu-item" onclick="showHelp()">
-                        <span class="menu-icon">❓</span>
-                        <span class="menu-text">Help & About</span>
-                        <span class="menu-shortcut">F1</span>
-                    </div>
-                    <div class="menu-separator"></div>
-                    <div class="menu-item" onclick="logout()">
-                        <span class="menu-icon">🚪</span>
-                        <span class="menu-text">Logout</span>
-                        <span class="menu-shortcut">Ctrl+L</span>
-                    </div>
-                </div>
+                <ul class="menu-list">
+                    <li class="menu-item primary" onclick="browseFolders()">
+                        <div class="menu-link">
+                            <span class="menu-icon">📁</span>
+                            <div class="menu-text">
+                                <div class="menu-title-text">Browse Files</div>
+                                <div class="menu-desc">Navigate through your files and folders</div>
+                            </div>
+                            <span class="menu-shortcut">Ctrl+B</span>
+                        </div>
+                    </li>
+                    
+                    <li class="menu-item secondary" onclick="showUploadDialog()">
+                        <div class="menu-link">
+                            <span class="menu-icon">📤</span>
+                            <div class="menu-text">
+                                <div class="menu-title-text">Upload Files</div>
+                                <div class="menu-desc">Upload new files to your storage</div>
+                            </div>
+                            <span class="menu-shortcut">Ctrl+U</span>
+                        </div>
+                    </li>
+                    
+                    <li class="menu-item" onclick="refreshPage()">
+                        <div class="menu-link">
+                            <span class="menu-icon">🔄</span>
+                            <div class="menu-text">
+                                <div class="menu-title-text">Refresh</div>
+                                <div class="menu-desc">Reload the current page</div>
+                            </div>
+                            <span class="menu-shortcut">F5</span>
+                        </div>
+                    </li>
+                    
+                    <li class="menu-item" onclick="showSettings()">
+                        <div class="menu-link">
+                            <span class="menu-icon">⚙️</span>
+                            <div class="menu-text">
+                                <div class="menu-title-text">Settings</div>
+                                <div class="menu-desc">Configure your preferences</div>
+                            </div>
+                            <span class="menu-shortcut">Ctrl+,</span>
+                        </div>
+                    </li>
+                    
+                    <li class="menu-item" onclick="showHelp()">
+                        <div class="menu-link">
+                            <span class="menu-icon">❓</span>
+                            <div class="menu-text">
+                                <div class="menu-title-text">Help & About</div>
+                                <div class="menu-desc">Get help and app information</div>
+                            </div>
+                            <span class="menu-shortcut">F1</span>
+                        </div>
+                    </li>
+                    
+                    <li class="menu-item danger" onclick="logout()">
+                        <div class="menu-link">
+                            <span class="menu-icon">🚪</span>
+                            <div class="menu-text">
+                                <div class="menu-title-text">Logout</div>
+                                <div class="menu-desc">End your current session</div>
+                            </div>
+                            <span class="menu-shortcut">Ctrl+L</span>
+                        </div>
+                    </li>
+                </ul>
             </div>
             
-            <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
-            
-            <h1>Web-based File Browser</h1>
-            <p class="welcome-text">Your personal file browser built for easy file sharing and transfer</p>
-            <div class="nav">
-                <a href="/browse">Browse Files</a>
-                <a href="/upload">Upload Files</a>
-            </div>
-            <div class="features">
-                <div class="feature">
-                    <div class="feature-icon">⚡</div>
-                    <h3>Fast & Efficient</h3>
-                    <p>Built with Rust for maximum performance and safety</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">🔒</div>
-                    <h3>Secure</h3>
-                    <p>System files are automatically filtered and protected</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">🌐</div>
-                    <h3>Web-Based</h3>
-                    <p>Access your files from any device with a web browser</p>
+            <div class="content-wrapper" id="contentWrapper">
+                <div class="main-content">
+                    <h1>Web-based File Browser</h1>
+                    <p class="welcome-text">Your personal file browser built for easy file sharing and transfer</p>
+                    <div class="nav">
+                        <a href="/browse">Browse Files</a>
+                        <a href="/upload">Upload Files</a>
+                    </div>
+                    <div class="features">
+                        <div class="feature">
+                            <div class="feature-icon">⚡</div>
+                            <h3>Fast & Efficient</h3>
+                            <p>Built with Rust for maximum performance and safety</p>
+                        </div>
+                        <div class="feature">
+                            <div class="feature-icon">🔒</div>
+                            <h3>Secure</h3>
+                            <p>System files are automatically filtered and protected</p>
+                        </div>
+                        <div class="feature">
+                            <div class="feature-icon">🌐</div>
+                            <h3>Web-Based</h3>
+                            <p>Access your files from any device with a web browser</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -147,48 +202,34 @@ pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send
             
             function toggleMenu() {
                 const hamburgerBtn = document.getElementById('hamburgerBtn');
-                const dropdownMenu = document.getElementById('dropdownMenu');
-                const menuOverlay = document.getElementById('menuOverlay');
+                const menuContainer = document.getElementById('menuContainer');
+                const contentWrapper = document.getElementById('contentWrapper');
                 
                 isMenuOpen = !isMenuOpen;
                 
                 if (isMenuOpen) {
                     hamburgerBtn.classList.add('active');
-                    dropdownMenu.classList.add('show');
-                    menuOverlay.classList.add('show');
+                    menuContainer.classList.add('show');
+                    contentWrapper.classList.add('menu-open');
                     document.body.style.overflow = 'hidden';
                 } else {
                     hamburgerBtn.classList.remove('active');
-                    dropdownMenu.classList.remove('show');
-                    menuOverlay.classList.remove('show');
+                    menuContainer.classList.remove('show');
+                    contentWrapper.classList.remove('menu-open');
                     document.body.style.overflow = 'auto';
                 }
             }
             
-            function closeMenu() {
-                if (isMenuOpen) {
-                    toggleMenu();
-                }
-            }
-            
+            function closeMenu() { if (isMenuOpen) toggleMenu(); }
             function refreshPage() { window.location.reload(); closeMenu(); }
             function showUploadDialog() { window.location.href = '/upload'; closeMenu(); }
             function browseFolders() { window.location.href = '/browse'; closeMenu(); }
-            function showSettings() { alert('Settings panel coming soon!'); closeMenu(); }
-            function showHelp() { 
-                alert('Web-based File Manager v1.0\n\nBuilt with Rust 🦀\nFirxTTech Solutions © 2025'); 
-                closeMenu(); 
-            }
-            function logout() { 
-                if (confirm('Are you sure you want to logout?')) {
-                    window.location.href = '/logout';
-                }
-                closeMenu(); 
-            }
+            function showSettings() { alert('Settings panel coming soon!\n\nPlanned features:\n• Theme customization\n• File view preferences\n• Upload settings\n• Security options'); closeMenu(); }
+            function showHelp() { alert('🦀 Web-based File Manager v1.0\n\nKeyboard Shortcuts:\n• Ctrl+B: Browse Files\n• Ctrl+U: Upload Files\n• F5: Refresh\n• Ctrl+,: Settings\n• F1: Help\n• Ctrl+L: Logout\n• Esc: Close Menu\n\nBuilt with Rust for maximum performance and security.\nSystem files are automatically filtered for your protection.\n\nFirxTTech Solutions © 2025'); closeMenu(); }
+            function logout() { if (confirm('Are you sure you want to logout?\nThis will end your current session.')) window.location.href = '/logout'; closeMenu(); }
             
-            // Keyboard shortcuts
             document.addEventListener('keydown', function(e) {
-                if (e.ctrlKey) {
+                if (e.ctrlKey || e.metaKey) {
                     switch(e.key) {
                         case 'u': e.preventDefault(); showUploadDialog(); break;
                         case 'b': e.preventDefault(); browseFolders(); break;
@@ -197,23 +238,16 @@ pub fn home_page() -> Result<Response<BoxBody>, Box<dyn std::error::Error + Send
                     }
                 } else if (e.key === 'F5') {
                     e.preventDefault(); refreshPage();
-                } else if (e.key === 'F1') {
-                    e.preventDefault(); showHelp();
                 } else if (e.key === 'Escape') {
                     closeMenu();
                 }
             });
             
+            // Close menu when clicking outside
             document.addEventListener('click', function(e) {
-                const hamburgerMenu = document.querySelector('.hamburger-menu');
-                if (!hamburgerMenu.contains(e.target) && isMenuOpen) {
+                if (isMenuOpen && !document.getElementById('menuContainer').contains(e.target) && !document.getElementById('hamburgerBtn').contains(e.target)) {
                     closeMenu();
                 }
-            });
-            
-            // Prevent menu from closing when clicking inside dropdown
-            document.getElementById('dropdownMenu').addEventListener('click', function(e) {
-                e.stopPropagation();
             });
         </script>
     </body>
